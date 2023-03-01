@@ -1,6 +1,6 @@
 ---
 output: github_document
-bibliography: refs.bib
+# bibliography: refs.bib
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -33,7 +33,7 @@ Routing is done with the [__cppRouting__](https://github.com/vlarmet/cppRouting)
 # Gravtiy model
 
 Done with the [__cppSim__](https://github.com/ischlo/cppSim) package, available from github. 
-
+See example in the package description. 
 
 # Local test
 
@@ -41,4 +41,11 @@ The scripts most suited for a local test are in the [small_area_run](https://git
 
 # References
 
-
+Larmet V (2022). _cppRouting: Algorithms for Routing and Solving the Traffic Assignment
+  Problem_. R package version 3.1, <https://CRAN.R-project.org/package=cppRouting>.
+  
+  
+Pebesma, E., 2018. Simple Features for R: Standardized Support for Spatial Vector Data. The R
+  Journal 10 (1), 439-446, https://doi.org/10.32614/RJ-2018-009
+  
+Boeing, G. 2017. "OSMnx: New Methods for Acquiring, Constructing, Analyzing, and Visualizing Complex Street Networks." Computers, Environment and Urban Systems 65, 126-139. doi:10.1016/j.compenvurbsys.2017.05.004
