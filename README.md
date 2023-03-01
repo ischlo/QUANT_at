@@ -7,13 +7,11 @@
 <!-- badges: end -->
 
 The goal of CASA_quant is to document the process of building large
-scale networks, routing and gravity modelling with R. Some of the data
-necessary to run these scripts requires specific access authorizations
-that can be obtained by registering with an institution on the
-UKDataService website and then downloading the census flows at MSOA
-level from WICID.
+scale networks, routing and gravity modelling with R.
 
-# Downloading networks
+# General overview
+
+## Downloading networks
 
 Up to a certain scale, like a big city, the regular packages handle the
 task pretty well. One like
@@ -21,7 +19,7 @@ task pretty well. One like
 python for example proved good to download graph format data (edges and
 nodes separately with all the necessary data for each.)
 
-# Routing
+## Routing
 
 Routing is done with the
 [**cppRouting**](https://github.com/vlarmet/cppRouting)
@@ -33,16 +31,95 @@ efficiently up to a certain number of locations. A medium city size
 network with around 200 origin/destination points seemed to be the limit
 on the machine on which it was run.
 
-# Gravtiy model
+## Gravtiy model
 
 Done with the [**cppSim**](https://github.com/ischlo/cppSim) package,
 available from github. See example in the package description.
 
-# Local test
+## Local test
 
 The scripts most suited for a local test are in the
 [small_area_run](https://github.com/ischlo/QUANT_at/tree/main/small_area_run)
 folder. A tutorial will be made to explain that in more details.
+
+# Census data
+
+For general information on the census geographies, check this
+[publication](https://www.ons.gov.uk/methodology/geography/ukgeographies/censusgeographies/2011censusgeographies)
+on the ONS website.
+
+In order to get the flows data. The table of interest is
+[WU03UK](https://statistics.ukdataservice.ac.uk/dataset/wu03uk-2011-sms-merged-lala-location-usual-residence-and-place-work-method-travel-work).
+It is necessary to register with an institutional account on the
+[UKDataService](https://ukdataservice.ac.uk) website, create a project
+and request the data set. Then download the census flows at MSOA level
+from [WICID](https://wicid.ukdataservice.ac.uk).
+
+#### Note
+
+The full data for England, Scotland and Wales, however, can not be
+downloaded and used from in it’s current form on the ONS website because
+the census geographies for Scotland have been modified since
+them.However, this change has not been integrated into the flows table.
+The way around that is to combine data for England and Wales from the
+2011 census with that of Scotland from the 2001 census.
+
+One way to see the problem is by inspecting the number of elements in
+both files for scotland from 2001 and 2011. The numbering of
+IntermediateZones for 2001 starts as *S0200001* and ends at *S0201235*.
+While for the 2011 data that is currently on ONS it starts from
+*S0201236* onward. The number of IZ is also different, creating problems
+when attempting to merge flows data from 2011 with Scottish geographies
+from 2011.
+
+## England and Wales
+
+Data for the 2011 census.
+
+### GEOPORTAL
+
+- [MSOA population weighted
+  centroids](https://geoportal.statistics.gov.uk/datasets/ons::msoa-dec-2011-population-weighted-centroids-in-england-and-wales/about)
+- [MSOA boundaries and
+  centroids](https://www.data.gov.uk/dataset/2cf1f346-2f74-4c06-bd4b-30d7e4df5ae7/middle-layer-super-output-area-msoa-boundaries)
+
+### Alternative sources
+
+#### Cambridgeshire Insights Open Data
+
+- [MSOA](https://data.cambridgeshireinsight.org.uk/dataset/output-areas)
+
+## Scotland
+
+Data for the 2001 census
+
+- [IntermediateZones
+  boundaries](https://spatialdata.gov.scot/geonetwork/srv/fre/catalog.search#/metadata/42dc0524-a8fb-4fdb-b838-2f63f96e5a2b)
+- [IntermediateZones population weighted
+  centroids](https://spatialdata.gov.scot/geonetwork/srv/fre/catalog.search#/metadata/0b5ec34c-f73d-44ad-b121-d9c63daae81b)
+
+If these links stop working for some reason, check the Scottish spatial
+data portal:
+<https://spatialdata.gov.scot/geonetwork/srv/fre/catalog.search#/search>
+
+and look for census 2001 in the search bar.
+
+## Northern Ireland
+
+Although it is not yet implemented in QUANT, data for NI can be found
+here if needed:
+
+- [Data portal](https://www.nisra.gov.uk/support/geography):
+  <https://www.nisra.gov.uk/support/geography>
+
+- [Census
+  boundaries](https://www.nisra.gov.uk/support/output-geography-census-2011/super-output-areas)
+
+## Data engineering
+
+The process to unify and combine these data sets is described in the
+scripts provided in the data engineering folder. If the hierarchy of
+folders is respected, it should run without interruptions.
 
 # References
 
