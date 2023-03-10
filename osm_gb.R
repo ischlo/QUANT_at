@@ -22,7 +22,7 @@ get_lcc <- function(ways, graph_mode = "weak") {
 
   igraph_ways <- igraph::graph_from_data_frame(ways[,.(from,to)],directed = FALSE)
 
-  if(igraph_ways |> igraph::is_connected(mode = graph_mode) {stop("Already a connected graph")}
+  if(igraph_ways |> igraph::is_connected(mode = graph_mode)) {stop("Already a connected graph")}
 
   nodes_comp <- igraph::components(igraph_ways,mode = graph_mode)
 
@@ -40,23 +40,21 @@ conn_db <-
                                ,host = "localhost"
                                ,dbname = db_name)
 
-way_nodes_db <- tbl(conn_db,"way_nodes")
-
-nodes_db <-  tbl(conn_db, "nodes")
-
-ways_db <- tbl(conn_db,"ways")
-
-tables <- dbListTables(conn_db)
-
-col_names <- lapply(tables, function(x) colnames(tbl(conn_db, x))) |> `names<-`(tables)
-
-col_names
+# way_nodes_db <- tbl(conn_db,"way_nodes")
+#
+# nodes_db <-  tbl(conn_db, "nodes")
+#
+# ways_db <- tbl(conn_db,"ways")
+#
+# tables <- dbListTables(conn_db)
+#
+# col_names <- lapply(tables, function(x) colnames(tbl(conn_db, x))) |> `names<-`(tables)
+#
+# col_names
 
 ######
 
 # bb <- osmdata::getbb("Liverpool, UK")
-
-orig_poly <- get_bb("Liverpool, UK")
 
 # tmap::qtm(orig_poly
 #     ,fill.alpha = .5) + tmap::qtm(lims)
@@ -95,71 +93,94 @@ orig_poly <- get_bb("Liverpool, UK")
 #                       ,statement = ways_query) |>
 #   as.data.table()
 
-nodes_query <- paste0("SELECT id, ST_AsText(geom) AS geom FROM nodes "
-                      ,"WHERE id IN ('"
-                      ,paste0(unique(ways_oi$node_id), collapse = "', '")
-                      ,"');")
+# nodes_query <- paste0("SELECT id, ST_AsText(geom) AS geom FROM nodes "
+#                       ,"WHERE id IN ('"
+#                       ,paste0(unique(ways_oi$node_id), collapse = "', '")
+#                       ,"');")
+#
+# nodes_oi <- dbGetQuery(conn_db, nodes_query) |> as.data.table()
+#
+# ways_dt <-
+#   ways_oi |>
+#   group_by(way_id) |>
+#   reframe(from = node_id[1:(dplyr::n()-1)]
+#           ,to = node_id[2:dplyr::n()]) |>
+#   as.data.table()
+#
+# ways_dt <- dplyr::left_join(ways_dt
+#                             ,nodes_oi
+#                             ,by = c("from" = "id")
+#                             ,suffix = c("", "_from")
+#                             ,keep = FALSE)
+#
+# ways_dt <- dplyr::left_join(ways_dt
+#                             ,nodes_oi
+#                             ,by = c("to"= "id")
+#                             ,suffix = c("", "_to")
+#                             ,keep = FALSE)
+#
+# if(ways_dt$geom |> is.na() |> any()) {
+#   print("Some ways have an empty 1st node")
+#   } else print("from nodes OK")
+#
+# if(ways_dt$geom_to |> is.na() |> any()) {
+#   print("Some ways have an empty 2nd node")
+#   } else print("to nodes OK")
+#
+# # ways_dt <- ways_dt |> drop_na(geom_wkt,geom_wkt_to)
+#
+# ways_dt <- get_lcc(ways = ways_dt)
+#
+# ways_dt$len <- st_distance(st_as_sf(ways_dt[,"geom"],wkt = 1, crs = 4326)
+#                            ,st_as_sf(ways_dt[,"geom_to"], wkt = 1, crs = 4326)
+#                            ,by_element = TRUE) |> units::set_units(NULL) |> round(1)
+#
+# ways_dt$len |> summary()
+#
+# # Making the nodes
+#
+# nodes_dt <- nodes_oi |>
+#   st_as_sf(wkt = 2, crs = 4326) |>
+#   mutate(X = st_coordinates(geom, crs = 4326)[,1]
+#          ,Y = st_coordinates(geom, crs = 4326)[,2]) |>
+#   st_drop_geometry() |>
+#   as.data.table()
+#
+# england_graph <- cppRouting::makegraph(df = ways_dt[,.(from,to,len)]
+#                                        ,coords = nodes_dt
+#                                        ,directed = FALSE) # |>
+#   # cpp_simplify(iterate = TRUE
+#   #              ,rm_loop = FALSE)
+#
+# # All this to build the network
 
-nodes_oi <- dbGetQuery(conn_db, nodes_query) |> as.data.table()
 
-ways_dt <-
-  ways_oi |>
-  group_by(way_id) |>
-  reframe(from = node_id[1:(dplyr::n()-1)]
-          ,to = node_id[2:dplyr::n()]) |>
-  as.data.table()
+##### READ in. the graph
 
-ways_dt <- dplyr::left_join(ways_dt
-                            ,nodes_oi
-                            ,by = c("from" = "id")
-                            ,suffix = c("", "_from")
-                            ,keep = FALSE)
+gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/gb_graph_ch.rds")
 
-ways_dt <- dplyr::left_join(ways_dt
-                            ,nodes_oi
-                            ,by = c("to"= "id")
-                            ,suffix = c("", "_to")
-                            ,keep = FALSE)
+format(object.size(gb_graph),units = "Mb")
 
-if(ways_dt$geom |> is.na() |> any()) {
-  print("Some ways have an empty 1st node")
-  } else print("from nodes OK")
+nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/nodes_codes.csv"
+                     ,header = TRUE
+                     )
 
-if(ways_dt$geom_to |> is.na() |> any()) {
-  print("Some ways have an empty 2nd node")
-  } else print("to nodes OK")
+nodes_codes[,id:=as.character(id)]
 
-# ways_dt <- ways_dt |> drop_na(geom_wkt,geom_wkt_to)
-
-ways_dt <- get_lcc(ways = ways_dt)
-
-ways_dt$len <- st_distance(st_as_sf(ways_dt[,"geom"],wkt = 1, crs = 4326)
-                           ,st_as_sf(ways_dt[,"geom_to"], wkt = 1, crs = 4326)
-                           ,by_element = TRUE) |> units::set_units(NULL) |> round(1)
-
-ways_dt$len |> summary()
-
-# Making the nodes
-
-nodes_dt <- nodes_oi |>
-  st_as_sf(wkt = 2, crs = 4326) |>
-  mutate(X = st_coordinates(geom, crs = 4326)[,1]
-         ,Y = st_coordinates(geom, crs = 4326)[,2]) |>
-  st_drop_geometry() |>
-  as.data.table()
-
-england_graph <- cppRouting::makegraph(df = ways_dt[,.(from,to,len)]
-                                       ,coords = nodes_dt
-                                       ,directed = FALSE) # |>
-  # cpp_simplify(iterate = TRUE
-  #              ,rm_loop = FALSE)
-
-# All this to build the network
 #### Now connecting to the other db to get the flows matrice and the centroids.
 
+test_area_name <- "Birmingham, UK"
+
+orig_poly <- osmdata::getbb(test_area_name, format_out = "sf_polygon")
+
+tmap::tmap_mode("view")
+orig_poly |> tmap::qtm(fill.alpha = .5)
+
+orig_poly_wkt <- get_bb(test_area_name)
+
 area_selection_query <- paste0("SELECT code, name, ST_AsText(geom) AS geometry "
-                               ,"FROM ews_areas WHERE ST_Intersects(geom, ST_GeomFromText('"
-                               ,poly_bound_ways
+                               ,"FROM gb_areas WHERE ST_Intersects(geom, ST_GeomFromText('"
+                               ,orig_poly_wkt
                                ,"', 4326));")
 
 area_selection <- dbGetQuery(conn = conn_db, area_selection_query)
@@ -207,33 +228,51 @@ flows_mat  <- flows_mat[,2:ncol(flows_mat)] |> as.matrix()
 #
 # nn <- dbGetQuery(conn = conn
 #                  ,statement = nn_query)
-
+#
 # while i'm setting up the db properly, use sf function to find nearest nodes in the network,
 # is slow, but will do it for small areas (max 150 msoas)
-
-nn <- st_nearest_feature(area_selection[match(areas,area_selection$code),] |> st_as_sf(wkt = 3, crs = 4326)
-                         ,nodes_oi |> st_as_sf(wkt = 2, crs = 4326))
-
+#
+# nn <- st_nearest_feature(area_selection[match(areas,area_selection$code),] |> st_as_sf(wkt = 3, crs = 4326)
+#                          ,nodes_oi |> st_as_sf(wkt = 2, crs = 4326))
+#
 # nn$osmid <- as.character(nn$osmid)
+#
+# from <- to <- nodes_oi$id[nn]
+#
+# length(from)
+#
+# graph <- cppRouting::cpp_simplify(england_graph, keep = c(from,to))
+#
+# graph_ch <- cppRouting::cpp_contract(graph)
 
-from <- to <- nodes_oi$id[nn]
-
-length(from)
-
-graph <- cppRouting::cpp_simplify(england_graph, keep = c(from,to))
-
-graph_ch <- cppRouting::cpp_contract(graph)
+from <- to <- nodes_codes[match(areas,nodes_codes$code),id]
 
 RcppParallel::setThreadOptions(numThreads = 2)
 
-distance_mat <- cppRouting::get_distance_matrix(graph_ch
+system.time({
+distance_mat <<- cppRouting::get_distance_matrix(gb_graph
                                                 ,from = from
                                                 ,to = to
                                                 ,algorithm = "mch")
+})
+
+microbenchmark::microbenchmark(
+  "distance_mat_mch" = cppRouting::get_distance_matrix(gb_graph
+                                                       ,from = from
+                                                       ,to = to
+                                                       ,algorithm = "mch")
+  ,"distance_mat_phast" = cppRouting::get_distance_matrix(gb_graph
+                                                          ,from = from
+                                                          ,to = to
+                                                          ,algorithm = "phast")
+  ,times = 1
+)
 
 distance_mat <- distance_mat/1000
 
 distance_mat |> dim()
+
+distance_mat |> c() |> hist()
 
 #### SIM
 
@@ -242,11 +281,11 @@ class(flows_mat)
 typeof(distance_mat)
 class(distance_mat)
 
-sim <- cppSim::run_model(flows = flows_mat
-                         ,distance = distance_mat
-                         ,beta = 0.6)
+sim <- cppSim::simulation(flows_matrix = flows_mat
+                         ,dist_matrix = distance_mat
+                         ,beta_offset = 0.6)
 
-cor(sim$values |> as.numeric()
+cor(sim$best_fit_values |> as.numeric()
     ,flows_mat |> as.numeric())^2 |> round(2)
 
 

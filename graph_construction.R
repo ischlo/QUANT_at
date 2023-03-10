@@ -1,114 +1,136 @@
-library(readr)
+# library(readr)
 library(data.table)
 library(igraph)
 library(cppRouting)
+library(DBI)
 # library(tidytable)
 
 ####
-
-get_lcc <- function(ways, mode = "weak") {
-
-  # require("igraph")
-
-  stopifnot("data.table" %in% class(ways), "from" %in% colnames(ways), "to" %in% colnames(ways))
-
-  igraph_ways <- igraph::graph_from_data_frame(ways[,.(from,to)],directed = FALSE)
-
-  if(igraph_ways |> igraph::is_connected(mode = "weak")) {stop("Already a connected graph")}
-
-  nodes_comp <- igraph::components(igraph_ways,mode = "weak")
-
-  vert_ids <- igraph::V(igraph_ways)[nodes_comp$membership == which.max(nodes_comp$csize)]$name
-
-  return(ways[from %in% vert_ids & to %in% vert_ids,])
-}
+# get_lcc <- function(ways, mode = "weak") {
+#
+#   # require("igraph")
+#
+#   stopifnot("data.table" %in% class(ways), "from" %in% colnames(ways), "to" %in% colnames(ways))
+#
+#   igraph_ways <- igraph::graph_from_data_frame(ways[,.(from,to)],directed = FALSE)
+#
+#   if(igraph_ways |> igraph::is_connected(mode = "weak")) {stop("Already a connected graph")}
+#
+#   nodes_comp <- igraph::components(igraph_ways,mode = "weak")
+#
+#   vert_ids <- igraph::V(igraph_ways)[nodes_comp$membership == which.max(nodes_comp$csize)]$name
+#
+#   setkey(ways,from,to)
+#
+#   return(ways[from %in% vert_ids & to %in% vert_ids,])
+# }
 
 
 ####
 
 way_nodes <- fread("/Users/ivann/Documents/CASA_quant/data/way_nodes.csv"
-                  ,nrows = 25000
+                  ,nrows = 5000
                   ,header =TRUE)
+
+way_nodes$node_id <- as.character(way_nodes$node_id)
 
 
 #### TWO ways of getting the nodes, either by reading from a database, or a csv, which is very big.
 # if ram is limited, use db to get some nodes of interest.
-# nodes <- fread("/Users/ivann/Documents/CASA_quant/data/nodes_text.csv"
-#                 ,nrows = 10000
-#                ,header = TRUE)
+nodes <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/nodes_proj.csv"
+                ,nrows = 100
+               ,header = TRUE)
 
-nodes_query <- paste0("SELECT id, ST_AsText(geom) AS geom FROM nodes "
+db_name <- "osm_gb"
+conn_db <-
+  DBI::dbConnect(RPostgreSQL::PostgreSQL()
+                 ,host = "localhost"
+                 ,dbname = db_name)
+
+nodes_query <- paste0("SELECT id, ST_X(ST_Transform(geom,27700)) as x, ST_Y(ST_Transform(geom,27700)) as y FROM nodes "
                       ,"WHERE id IN ('"
-                      ,paste0(unique(way_nodes$node_id), collapse = "', '")
+                      ,paste0(unique(ways$node_id), collapse = "', '")
                       ,"');")
 
-nodes <- dbGetQuery(conn = conn_db
+nodes <- DBI::dbGetQuery(conn = conn_db
                     ,statement = nodes_query) %>% as.data.table()
 
-way_nodes$node_id <- as.double(way_nodes$node_id)
-
+nodes$id <- as.character(nodes$id)
 
 # get_length <- function(x,y) {  }
 
-ways <- merge(way_nodes,nodes, by.x = "node_id", by.y = "id",all.x = TRUE)
+# profvis::profvis({
+  setorder(way_nodes, way_id, sequence_id)
 
-ways_edges <- ways[,cbind(.SD[1:(.N-1)
-                              ,.(orig = node_id
-                                 ,orig_geom = geom)],.SD[2:.N,.(dest = node_id
-                                                                ,dest_geom = geom)])
-                   ,by = way_id]
+  ways <- merge.data.table(way_nodes
+                           ,nodes
+                           ,sort = FALSE
+                           ,by.x = "node_id"
+                           ,by.y = "id"
+                           ,all.x = TRUE)
 
-ways_edges[,length := round(units::set_units(st_distance(st_as_sf(.SD[,"orig_geom"],wkt = 1,crs = 4326)
-                                                         ,st_as_sf(.SD[,"dest_geom"],wkt = 1,crs = 4326)
-                                                         ,by_element = TRUE),NULL))]
+  print(any(is.na(ways$x),is.na(ways$y)))
 
-# ways <- way_nodes[,.SD[.N != 1],by = node_id]
+  #####
 
-# way_nodes[,.SD[1:(.N-1),node_id],.SD[2:.N,node_id],keyby = way_id]
+  # x <- 1:15
+  #
+  # shift(x,n = 1L,type = "lag")
 
+  ways[,`:=`(from = shift(node_id, 1,type = "lag")
+             ,from_x = shift(x,1,type = "lag")
+             ,from_y = shift(y,1,type = "lag"))]
 
+  ways %>% head(50)
 
+  setnames(ways, c("node_id","x","y"),c("to","to_x","to_y"))
 
-ways_dt <- way_nodes |>
-  group_by(way_id) |>
-  reframe(from = node_id[1:(dplyr::n()-1)]
-          ,to = node_id[2:dplyr::n()]) |>
-  as.data.table()
+  ways %>% head()
 
-ways_dt <- get_lcc(ways = ways_dt)
+  setkey(ways, sequence_id,physical = FALSE)
 
-ways_dt <- dplyr::left_join(ways_dt
-                            ,nodes
-                            ,by = c("from" = "id")
-                            ,suffix = c("", "_from")
-                            ,keep = FALSE)
+  ways <- ways[sequence_id != 0,]
 
-ways_dt <- dplyr::left_join(ways_dt
-                            ,nodes
-                            ,by = c("to"= "id")
-                            ,suffix = c("", "_to")
-                            ,keep = FALSE)
+# })
+
+#####
 
 
-ways_dt$len <- st_distance(st_as_sf(ways_dt[,"geom"],wkt = 1, crs = 4326)
-                           ,st_as_sf(ways_dt[,"geom_to"], wkt = 1, crs = 4326)
-                           ,by_element = TRUE) |> units::set_units(NULL) |> round(1)
+# profvis::profvis({
+  # edges <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/edges_graph.csv"
+  #                ,header = TRUE
+  #                ,nrows = 100)
+  #
+  # setnames(edges, c("from_id","to_id"),c("from","to"))
 
-nodes_coord <- nodes |>
-  st_as_sf(wkt = 2, crs = 4326) %>%
-  st_coordinates()
+  edges[,`:=`(from = as.character(from)
+              ,to = as.character(to))]
 
-nodes_dt <- cbind(nodes[,"id"],nodes_coord) %>%
-  as.data.table()
+  stopifnot("data.table" %in% class(edges), "from" %in% colnames(edges), "to" %in% colnames(edges))
 
-gb_graph <- cppRouting::makegraph(df = ways_dt[,.("from","to","length")]
+  igraph_edges <- igraph::graph_from_data_frame(edges[,.(from,to)],directed = FALSE)
+
+  if(igraph_edges |> igraph::is_connected(mode = "weak")) {stop("Already a connected graph")}
+
+  nodes_comp <- igraph::components(igraph_edges,mode = "weak")
+
+  vert_ids <- igraph::V(igraph_edges)[nodes_comp$membership == which.max(nodes_comp$csize)]$name
+
+  # setkey(edges,from,to)
+
+  edges <- edges[from %in% vert_ids & to %in% vert_ids,]
+# })
+
+fwrite(edges, "edges_lcc.csv")
+
+# nodes <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/nodes_proj.csv"
+#                ,header  =TRUE
+#                ,nrows = 10000)
+
+# head(nodes$id)
+# head(edges$to)
+
+gb_graph <- cppRouting::makegraph(df = edges[,.("from","to","length")]
                                   ,directed = FALSE)
 
 gb_graph %>% rlist::list.save("gb_graph.rds")
-
-
-
-
-
-
-
