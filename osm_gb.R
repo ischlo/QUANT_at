@@ -8,7 +8,8 @@ library(tidyr)
 library(RPostgreSQL)
 library(cppRouting)
 library(Btoolkit)
-library(connections) # https://rstudio.github.io/connections/ check here for more
+library(cppSim)
+# library(connections) # https://rstudio.github.io/connections/ check here for more
 
 #####
 
@@ -169,9 +170,11 @@ nodes_codes[,id:=as.character(id)]
 
 #### Now connecting to the other db to get the flows matrice and the centroids.
 
-test_area_name <- "Birmingham, UK"
+test_area_name <- "London, UK"
 
-orig_poly <- osmdata::getbb(test_area_name, format_out = "sf_polygon")
+orig_poly <- osmdata::getbb(test_area_name
+                            # ,format_out = "sf_polygon"
+                            ) |> make_poly()
 
 tmap::tmap_mode("view")
 orig_poly |> tmap::qtm(fill.alpha = .5)
@@ -186,6 +189,7 @@ area_selection_query <- paste0("SELECT code, name, ST_AsText(geom) AS geometry "
 area_selection <- dbGetQuery(conn = conn_db, area_selection_query)
 
 area_selection$code |> unique()
+area_selection$code |> unique() |> length()
 
 areas <- area_selection$code
 
@@ -247,7 +251,7 @@ flows_mat  <- flows_mat[,2:ncol(flows_mat)] |> as.matrix()
 
 from <- to <- nodes_codes[match(areas,nodes_codes$code),id]
 
-RcppParallel::setThreadOptions(numThreads = 2)
+RcppParallel::setThreadOptions(numThreads = 3)
 
 system.time({
 distance_mat <<- cppRouting::get_distance_matrix(gb_graph
@@ -256,23 +260,25 @@ distance_mat <<- cppRouting::get_distance_matrix(gb_graph
                                                 ,algorithm = "mch")
 })
 
-microbenchmark::microbenchmark(
-  "distance_mat_mch" = cppRouting::get_distance_matrix(gb_graph
-                                                       ,from = from
-                                                       ,to = to
-                                                       ,algorithm = "mch")
-  ,"distance_mat_phast" = cppRouting::get_distance_matrix(gb_graph
-                                                          ,from = from
-                                                          ,to = to
-                                                          ,algorithm = "phast")
-  ,times = 1
-)
+# microbenchmark::microbenchmark(
+#   "distance_mat_mch" = cppRouting::get_distance_matrix(gb_graph
+#                                                        ,from = from
+#                                                        ,to = to
+#                                                        ,algorithm = "mch")
+#   ,"distance_mat_phast" = cppRouting::get_distance_matrix(gb_graph
+#                                                           ,from = from
+#                                                           ,to = to
+#                                                           ,algorithm = "phast")
+#   ,times = 1
+# )
 
 distance_mat <- distance_mat/1000
 
 distance_mat |> dim()
 
-distance_mat |> c() |> hist()
+distance_mat |> c() |> hist(breaks = 100)
+
+any(is.na(distance_mat))
 
 #### SIM
 
@@ -284,6 +290,8 @@ class(distance_mat)
 sim <- cppSim::simulation(flows_matrix = flows_mat
                          ,dist_matrix = distance_mat
                          ,beta_offset = 0.6)
+
+sim$best_fit_beta
 
 cor(sim$best_fit_values |> as.numeric()
     ,flows_mat |> as.numeric())^2 |> round(2)
