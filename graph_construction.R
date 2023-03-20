@@ -37,9 +37,9 @@ way_nodes$node_id <- as.character(way_nodes$node_id)
 
 #### TWO ways of getting the nodes, either by reading from a database, or a csv, which is very big.
 # if ram is limited, use db to get some nodes of interest.
-nodes <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/nodes_proj.csv"
-                ,nrows = 100
-               ,header = TRUE)
+# nodes <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/nodes_proj.csv"
+#                 ,nrows = 100
+#                ,header = TRUE)
 
 db_name <- "osm_gb"
 conn_db <-
@@ -49,7 +49,7 @@ conn_db <-
 
 nodes_query <- paste0("SELECT id, ST_X(ST_Transform(geom,27700)) as x, ST_Y(ST_Transform(geom,27700)) as y FROM nodes "
                       ,"WHERE id IN ('"
-                      ,paste0(unique(ways$node_id), collapse = "', '")
+                      ,paste0(unique(way_nodes$node_id), collapse = "', '")
                       ,"');")
 
 nodes <- DBI::dbGetQuery(conn = conn_db

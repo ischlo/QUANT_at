@@ -176,10 +176,10 @@ orig_poly <- osmdata::getbb(test_area_name
                             # ,format_out = "sf_polygon"
                             ) |> make_poly()
 
-tmap::tmap_mode("view")
-orig_poly |> tmap::qtm(fill.alpha = .5)
+# tmap::tmap_mode("view")
+# orig_poly |> tmap::qtm(fill.alpha = .5)
 
-orig_poly_wkt <- get_bb(test_area_name)
+orig_poly_wkt <- Btoolkit::get_bb(test_area_name)
 
 area_selection_query <- paste0("SELECT code, name, ST_AsText(geom) AS geometry "
                                ,"FROM gb_areas WHERE ST_Intersects(geom, ST_GeomFromText('"
