@@ -89,19 +89,11 @@ nodes$id <- as.character(nodes$id)
 
   setkey(ways, sequence_id,physical = FALSE)
 
-  ways <- ways[sequence_id != 0,]
+  edges <- ways[sequence_id != 0,]
 
 # })
 
 #####
-
-
-# profvis::profvis({
-  # edges <- fread("/Users/ivann/Documents/CASA_quant/data/db_files/edges_graph.csv"
-  #                ,header = TRUE
-  #                ,nrows = 100)
-  #
-  # setnames(edges, c("from_id","to_id"),c("from","to"))
 
   edges[,`:=`(from = as.character(from)
               ,to = as.character(to))]
@@ -119,7 +111,6 @@ nodes$id <- as.character(nodes$id)
   # setkey(edges,from,to)
 
   edges <- edges[from %in% vert_ids & to %in% vert_ids,]
-# })
 
 fwrite(edges, "edges_lcc.csv")
 

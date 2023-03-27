@@ -158,7 +158,9 @@ conn_db <-
 
 ##### READ in. the graph
 
-gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/gb_graph_ch.rds")
+gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_1/gb_graph_ch.rds")
+
+gb_graph$nbnode
 
 format(object.size(gb_graph),units = "Mb")
 

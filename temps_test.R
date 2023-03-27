@@ -4,7 +4,7 @@ library(Btoolkit)
 library(DBI)
 library(RPostgreSQL)
 
-gb_mat <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/distance_mat_gb/distance_mat_gb.csv"
+gb_mat <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_1/distance_mat_gb/distance_mat_gb.csv"
                 ,header = TRUE
                 # ,nrows = 1000
                 ) |> as.matrix()
@@ -95,10 +95,6 @@ tmap::qtm(gb_areas[samp_orig,.(geometry,area_code,id)] |> st_as_sf()
 
 
 #### makind the list of edges to add to the graph.
-
-conn_db <- DBI::dbConnect(RPostgreSQL::PostgreSQL()
-                          ,dbname = "osm_gb")
-
 # the bboxes here are manually determined
 # in order to extract the nodes and find the links to create
 # adding ferry lines basically
@@ -188,7 +184,7 @@ new_edges <- append_edge(new_edges,"457354875","2622696915")
 # study_area(limits_8)
 
 # node to add because one of the msoas has no roads at all...
-node_01 <- data.table(id = "000000001", x = -7.0794,y = 57.7392) |>
+node_01 <- data.table(id = "100000000", x = -7.0794,y = 57.7392) |>
   st_as_sf(coords = c(2,3),crs = 4326) |>
   st_transform(27700) |>
   dplyr::mutate(x = st_coordinates(geometry)[,1]
@@ -198,10 +194,14 @@ node_01 <- data.table(id = "000000001", x = -7.0794,y = 57.7392) |>
 ##
 
 new_edges <- append_edge(new_edges,"922254994","7948732244")
-new_edges <- append_edge(new_edges,"000000001","922254994")
+new_edges <- append_edge(new_edges,"100000000","922254994")
 
 
 #### getting the coordinates of the nodes:
+
+conn_db <- DBI::dbConnect(RPostgreSQL::PostgreSQL()
+                          ,dbname = "osm_gb")
+
 nodes_coords_list <-  new_edges |> unlist() |> unname() |> unique()
 nodes_coords_query <- paste0("SELECT id, ST_X(ST_Transform(geom,27700)) as x, ST_Y(ST_Transform(geom,27700)) as y FROM nodes "
                              ,"WHERE id IN ('"
