@@ -158,13 +158,13 @@ conn_db <-
 
 ##### READ in. the graph
 
-gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_1/gb_graph_ch.rds")
+gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/gb_graph_ch.rds")
 
 gb_graph$nbnode
 
 format(object.size(gb_graph),units = "Mb")
 
-nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/nodes_codes.csv"
+nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/nodes_codes_ordered.csv"
                      ,header = TRUE
                      )
 
@@ -172,7 +172,7 @@ nodes_codes[,id:=as.character(id)]
 
 #### Now connecting to the other db to get the flows matrice and the centroids.
 
-test_area_name <- "London, UK"
+test_area_name <- "Edinburgh, UK"
 
 orig_poly <- osmdata::getbb(test_area_name
                             # ,format_out = "sf_polygon"
@@ -226,32 +226,7 @@ areas |> length()
 
 flows_mat  <- flows_mat[,2:ncol(flows_mat)] |> as.matrix()
 
-# the query is currently only valid for london as it's the data set imported on the pgsql db
-# nn_query <- paste0("SELECT nodes.osmid AS osmid , areas.code AS code "
-#                    ,"FROM area_selected areas "
-#                    ,"CROSS JOIN LATERAL (SELECT nodes.osmid, nodes.geom <-> areas.geom AS dist "
-#                    ,"FROM nodes ORDER BY dist LIMIT 1 ) nodes;")
-#
-# nn <- dbGetQuery(conn = conn
-#                  ,statement = nn_query)
-#
-# while i'm setting up the db properly, use sf function to find nearest nodes in the network,
-# is slow, but will do it for small areas (max 150 msoas)
-#
-# nn <- st_nearest_feature(area_selection[match(areas,area_selection$code),] |> st_as_sf(wkt = 3, crs = 4326)
-#                          ,nodes_oi |> st_as_sf(wkt = 2, crs = 4326))
-#
-# nn$osmid <- as.character(nn$osmid)
-#
-# from <- to <- nodes_oi$id[nn]
-#
-# length(from)
-#
-# graph <- cppRouting::cpp_simplify(england_graph, keep = c(from,to))
-#
-# graph_ch <- cppRouting::cpp_contract(graph)
-
-from <- to <- nodes_codes[match(areas,nodes_codes$code),id]
+from <- to <- nodes_codes[match(areas,nodes_codes$areakey),id]
 
 RcppParallel::setThreadOptions(numThreads = 3)
 
@@ -289,14 +264,18 @@ class(flows_mat)
 typeof(distance_mat)
 class(distance_mat)
 
-sim <- cppSim::simulation(flows_matrix = flows_mat
-                         ,dist_matrix = distance_mat
-                         ,beta_offset = 0.6)
+profvis::profvis({
+  sim <- cppSim::simulation(flows_matrix = flows_mat
+                            ,dist_matrix = distance_mat
+                            ,beta_offset = 0.6)
+
+})
 
 sim$best_fit_beta
 
 cor(sim$best_fit_values |> as.numeric()
     ,flows_mat |> as.numeric())^2 |> round(2)
+
 
 
 

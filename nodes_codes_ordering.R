@@ -11,7 +11,7 @@ gb_areas <- fread("/Users/ivann/Documents/CASA_quant/data/gb_areas_wkt.csv")
 
 # important to specify the right path to the latest
 # version of the nodes_codes file for the right graph
-nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_1/nodes_codes.csv"
+nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/nodes_codes.csv"
                      ,header = TRUE)
 
 nodes_codes[,id:=as.character(id)]
@@ -32,5 +32,20 @@ nodes_codes_ordered <- merge.data.table(code_lookup[,.(zonei,areakey)]
 
 setorder(nodes_codes_ordered,zonei)
 
-fwrite(nodes_codes_ordered, "/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_1/nodes_codes_ordered.csv")
+### validate ###
+
+nodes_codes_ordered |> lapply(FUN = typeof)
+nodes_codes_ordered |> summary()
+nodes_codes_ordered |> lapply(FUN = function(x){any(is.na(x),is.null(x))})
+
+nodes_codes_ordered[,`:=`(areakey=as.factor(areakey)
+                          ,id=as.factor(id))]
+
+####
+
+fwrite(nodes_codes_ordered, "gb_graph_ch/v_3/nodes_codes_ordered.csv"
+       ,row.names = FALSE
+       ,col.names = TRUE)
+
+# nodes_codes_ordered |> readr::write_csv("gb_graph_ch/v_3/nodes_codes_ordered_2.csv")
 
