@@ -4,6 +4,8 @@ library(Btoolkit)
 library(DBI)
 library(RPostgreSQL)
 
+
+# this comment was added from hte new laptop
 ####
 conn_db <- DBI::dbConnect(RPostgreSQL::PostgreSQL()
                           ,dbname = "osm_gb")
