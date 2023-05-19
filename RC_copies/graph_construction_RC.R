@@ -24,25 +24,45 @@ library(data.table)
 
 ####
 
-way_nodes <- fread(here::here("data/way_nodes.csv")
-                   # ,nrows = 25000
+ways <- fread("/home/ucfnisc/Scratch/osm_gb_graph/data/way_nodes.csv"
                    ,header =TRUE)
 
-nodes <- fread(here::here("data/nodes_text.csv")
-                # ,nrows = 10000
+ways$node_id <- as.double(way_nodes$node_id)
+
+nodes <- fread("/home/ucfnisc/Scratch/osm_gb_graph/data/nodes_text.csv"
                ,header = TRUE)
 
-ways <- merge(way_nodes,nodes, by.x = "node_id", by.y = "id",all.x = TRUE)
+nodes$id <- as.double(nodes$id)
 
-if(any(is.na(ways$geom))){print("Some nodes are missing;")}
+setorder(ways, way_id, sequence_id)
 
-# ways_edges <- ways[,cbind(.SD[1:(.N-1)
-#                               ,.(orig = node_id
-#                                  ,orig_geom = geom)],.SD[2:.N,.(dest = node_id
-#                                                                 ,dest_geom = geom)])
-#                    ,by = way_id]
+ways <- merge.data.table(ways
+                         ,nodes
+                         ,sort = FALSE
+                         ,by.x = "node_id"
+                         ,by.y = "id"
+                         ,all.x = TRUE)
+
+print(any(is.na(ways$geom)))
+
+#####
+
+# x <- 1:15
 #
-# ways_edges[,length := round(units::set_units(st_distance(st_as_sf(.SD[,"orig_geom"],wkt = 1,crs = 4326)
-#                                                          ,st_as_sf(.SD[,"dest_geom"],wkt = 1,crs = 4326)
-#                                                          ,by_element = TRUE),NULL))]
-#
+# shift(x,n = 1L,type = "lag")
+
+ways[,`:=`(from = shift(node_id, 1,type = "lag"),from_geom = shift(geom,1,type = "lag"))]
+
+ways %>% head(50)
+
+setnames(ways, c("node_id","geom"),c("to","to_geom"))
+
+ways %>% head()
+
+setkey(ways, sequence_id,physical = FALSE)
+
+ways <- ways[sequence_id != 0,]
+
+fwrite(ways,file = "edges.csv")
+
+
