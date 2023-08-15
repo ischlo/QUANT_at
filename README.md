@@ -17,7 +17,13 @@ Up to a certain scale, like a big city, the regular packages handle the
 task pretty well. One like
 [**osmnx**](https://github.com/gboeing/osmnx)\[@boeing_osmnx_2017\] in
 python for example proved good to download graph format data (edges and
-nodes separately with all the necessary data for each.)
+nodes separately with all the necessary data for each.) However, when
+the data sets get big (country scale, multiple regions at once), it is
+recommended to switch to more powerful tools. I used
+[osmosis](https://wiki.openstreetmap.org/wiki/Osmosis), which is a
+command line tool to manipulate raw osm files taken from
+[Geofabrick](https://www.geofabrik.de). See the data repository for the
+instructions to set it up.
 
 ## Routing
 

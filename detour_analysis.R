@@ -14,7 +14,9 @@ dbListTables(conn = conn_db)
 
 ####
 
-gb_mat <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/distance_mat_gb/distance_mat_gb.csv"
+directory <- getwd()
+
+gb_mat <- fread(paste0(directory,"/gb_graph_ch/v_3/distance_mat_gb/distance_mat_gb.csv")
                 ,header = TRUE) |>
   as.matrix()
 
@@ -28,7 +30,7 @@ which(gb_mat == 0, arr.ind = TRUE) # should equal the number of origins.
 
 ####
 
-nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/nodes_codes_ordered.csv")
+nodes_codes <- fread(paste0(directory,"/gb_graph_ch/v_3/nodes_codes_ordered.csv"))
 
 nodes_codes[,id:=as.character(id)]
 
@@ -36,7 +38,7 @@ unique(nodes_codes$id) |> length()
 
 ####
 
-gb_areas <- st_read("/Users/ivann/Documents/CASA_quant/data/gb_areas.geojson") |> as.data.table()
+gb_areas <- st_read(paste0(directory,"/data/gb_areas.geojson")) |> as.data.table()
 
 gb_areas <- merge(gb_areas,nodes_codes
                   ,sort = FALSE

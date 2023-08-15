@@ -12,20 +12,17 @@ library(cppSim)
 
 #####
 
-gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA/Benchmarks/modified_cppr_ networks/osm_cppr_modified.rds")
+gb_graph <- rlist::list.load("/Users/ivannschlosser/Documents/CASA/Benchmarks/modified_cppr_ networks/osm_cppr_modified.rds")
 
-london_edges <- st_read("/Users/ivann/Documents/CASA/RC_outputs/london_all/london_all.gpkg"
+london_edges <- st_read("/Users/ivannschlosser/Documents/CASA/RC_outputs/london_all/london_all.gpkg"
                         ,layer = "edges")
-
 ####
-
 db_name <- "osm_gb"
 
 conn_db <-
   DBI::dbConnect(RPostgreSQL::PostgreSQL()
                  ,host = "localhost"
                  ,dbname = db_name)
-
 #####
 
 study_area <- function(limits

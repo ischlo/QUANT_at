@@ -2,7 +2,7 @@ library(data.table)
 
 ####
 
-gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/gb_graph_ch.rds")
+gb_graph <- rlist::list.load("/Users/ivannschlosser/Documents/CASA_quant/gb_graph_ch/v_3/gb_graph_ch.rds")
 
 nodes <- gb_graph$dict |> as.data.table()
 nodes[,ref:=as.character(ref)]

@@ -9,28 +9,9 @@ library(RPostgreSQL)
 library(cppRouting)
 library(Btoolkit)
 library(cppSim)
+library(reshape2)
+
 # library(connections) # https://rstudio.github.io/connections/ check here for more
-
-#####
-
-# this function is useful in this very specific context,
-# could be added to Btoolkit, but probably not really useful there.
-get_lcc <- function(ways, graph_mode = "weak") {
-
-  # require("igraph")
-
-  stopifnot("data.table" %in% class(ways), "from" %in% colnames(ways), "to" %in% colnames(ways))
-
-  igraph_ways <- igraph::graph_from_data_frame(ways[,.(from,to)],directed = FALSE)
-
-  if(igraph_ways |> igraph::is_connected(mode = graph_mode)) {stop("Already a connected graph")}
-
-  nodes_comp <- igraph::components(igraph_ways,mode = graph_mode)
-
-  vert_ids <- igraph::V(igraph_ways)[nodes_comp$membership == which.max(nodes_comp$csize)]$name
-
-  return(ways[from %in% vert_ids & to %in% vert_ids,])
-}
 
 ###########
 
@@ -158,25 +139,26 @@ conn_db <-
 
 ##### READ in. the graph
 
-gb_graph <- rlist::list.load("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/gb_graph_ch.rds")
+gb_graph <- rlist::list.load("gb_graph_ch/v_3/gb_graph_ch.rds")
 
 gb_graph$nbnode
 
 format(object.size(gb_graph),units = "Mb")
 
-nodes_codes <- fread("/Users/ivann/Documents/CASA_quant/gb_graph_ch/v_3/nodes_codes_ordered.csv"
-                     ,header = TRUE
-                     )
+nodes_codes <- fread("gb_graph_ch/v_3/nodes_codes_ordered.csv"
+                     ,header = TRUE)
 
 nodes_codes[,id:=as.character(id)]
 
 #### Now connecting to the other db to get the flows matrice and the centroids.
 
-test_area_name <- "Edinburgh, UK"
+test_area_name <- "Scotland, UK"
 
 orig_poly <- osmdata::getbb(test_area_name
                             # ,format_out = "sf_polygon"
                             ) |> make_poly()
+
+# orig_poly
 
 # tmap::tmap_mode("view")
 # orig_poly |> tmap::qtm(fill.alpha = .5)
@@ -209,7 +191,7 @@ flows <- flows_db |> collect()
 
 flows |> nrow()
 
-flows <- flows |> mutate(at = bicycle + foot)
+flows <- flows |> mutate(at = foot)#bicycle +
 
 flows_mat <- flows |>
   as.data.table() |>
@@ -237,6 +219,33 @@ distance_mat <<- cppRouting::get_distance_matrix(gb_graph
                                                 ,algorithm = "mch")
 })
 
+
+### import gb_areas to do this.
+
+gb_areas[errors,'centroid'] |> st_as_sf(wkt=1,crs = 4326)
+
+leaflet(data = gb_areas[errors,geometry]) |>
+  leaflet::addTiles() |>
+  addCircles(data = gb_areas[errors,'centroid'] |> st_as_sf(wkt=1,crs = 4326)
+              ,fillColor = 'black') |>
+  leafgl::addGlPoints(wc_centroid[errors_s[,1],]
+                      ,fillColor = 'red'
+                      ,fillOpacity = 1)
+
+diag_dist <- sf::st_distance(gb_areas[errors,'centroid'] |> st_as_sf(wkt=1,crs = 4326)
+                             ,gb_areas[errors,'w_centroid'] |> st_as_sf(wkt=1,crs = 4326)
+                             ,by_element = TRUE) |>
+  round() |>
+  units::set_units(NULL)
+
+errors <- which(is.na(diag_dist))
+
+diag_dist <- diag_dist/1000
+
+distance_mat <- `diag<-`(distance_mat,diag_dist[match(areas,gb_areas$area_code)])
+
+errors_s <- which(is.na(distance_mat),arr.ind = TRUE)
+
 # microbenchmark::microbenchmark(
 #   "distance_mat_mch" = cppRouting::get_distance_matrix(gb_graph
 #                                                        ,from = from
@@ -255,7 +264,9 @@ distance_mat |> dim()
 
 distance_mat |> c() |> hist(breaks = 100)
 
-any(is.na(distance_mat))
+# distance_mat
+
+which(is.na(distance_mat),arr.ind = TRUE)
 
 #### SIM
 
@@ -273,11 +284,27 @@ profvis::profvis({
 
 sim$best_fit_beta
 
-cor(sim$best_fit_values |> as.numeric()
-    ,flows_mat |> as.numeric())^2 |> round(2)
+sim$best_fit_values |> dim()
+flows_mat |> dim()
+
+cor(sim$best_fit_values[flows_mat!=0] |> as.numeric()
+    ,flows_mat[flows_mat!=0] |> as.numeric() |> as.numeric())^2 |> round(2)
 
 
+flows_dt <- data.table('flow'=c(flows_mat)
+                       ,'distance'=c(distance_mat)
+                       ,'flow_model'=c(sim$best_fit_values)
+                       )
 
+ped_speed <- 5
+
+flows_dt[distance!=0,paste0(round(sum(flow*distance)/sum(flow)/5*60,0),' minutes.')]
+
+flows_dt[flow!=0,cor(flow,flow_model)]
+
+flows_dt[flow!=0 & flow_model!=0][
+  ,{plot(flow,flow_model,log='xy')
+    lines(1:1000,1:1000,col = 'darkred',lwd = 2)}]
 
 
 

@@ -24,12 +24,11 @@ The goal of CASA_quant is to document the process of building large scale networ
 ## Downloading networks
 
 Up to a certain scale, like a big city, the regular packages handle the task pretty well. One like [__osmnx__](https://github.com/gboeing/osmnx)[@boeing_osmnx_2017] in python for example proved good to download graph format data (edges and nodes separately with all the necessary data for each.)
-
+However, when the data sets get big (country scale, multiple regions at once), it is recommended to switch to more powerful tools. I used [osmosis](https://wiki.openstreetmap.org/wiki/Osmosis), which is a command line tool to manipulate raw osm files taken from [Geofabrick](https://www.geofabrik.de). See the data repository for the instructions to set it up.  
 
 ## Routing
 
 Routing is done with the [__cppRouting__](https://github.com/vlarmet/cppRouting) [@larmet_cppR_2022] package. For that, one needs to find the nearest node in the network to the centroid of the origin and destination geometries. In base R, this can be done with the `st_nearest_feature` function from __sf__ [@pebesma_simple_2018], which will work efficiently up to a certain number of locations. A medium city size network with around 200 origin/destination points seemed to be the limit on the machine on which it was run. 
-
 
 ## Gravtiy model
 
@@ -38,15 +37,13 @@ See example in the package description.
 
 ## Local test
 
-The scripts most suited for a local test are in the [small_area_run](https://github.com/ischlo/QUANT_at/tree/main/small_area_run) folder. A tutorial will be made to explain that in more details. 
-
+The scripts most suited for a local test are in the [small_area_run](https://github.com/ischlo/QUANT_at/tree/main/small_area_run) folder.
 
 # Census data
 For general information on the census geographies, check this [publication](https://www.ons.gov.uk/methodology/geography/ukgeographies/censusgeographies/2011censusgeographies) on the ONS website.
 
 In order to get the flows data. The table of interest is [WU03UK](https://statistics.ukdataservice.ac.uk/dataset/wu03uk-2011-sms-merged-lala-location-usual-residence-and-place-work-method-travel-work). 
 It is necessary to register with an institutional account on the [UKDataService](https://ukdataservice.ac.uk) website, create a project and request the data set. Then download the census flows at MSOA level from [WICID](https://wicid.ukdataservice.ac.uk). 
-
 
 #### Note
 

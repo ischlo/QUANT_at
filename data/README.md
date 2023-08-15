@@ -6,17 +6,21 @@ data in a postgres database, it is WORK IN PROGRESS.
 
 # Downloading data
 
-Find the [Geofabrick]() file corresponding to the UK and download it.
+Find the
+[Geofabrick](http://download.geofabrik.de/europe/great-britain.html)
+file corresponding to the UK and download it.
 
 # Data engineering
 
-We will then process the data with the osmosis command line tool. More
-details on it usage can be found [here]().
+We will then process the data with the
+[osmosis](https://wiki.openstreetmap.org/wiki/Osmosis) command line
+tool.
 
 ## Setup database
 
-Create a postgres data base bz running `createdb osm_gb`. Then log into
-it by entering `psql osm_gb`. Now we will run a few SQL commands.
+Create a postgres data base by running `createdb osm_gb`. Then log into
+it by entering `psql osm_gb`. Now we will run a few SQL commands. \###
+Postgis
 
 ## Setup environment
 
