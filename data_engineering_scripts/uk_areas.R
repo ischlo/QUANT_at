@@ -28,7 +28,11 @@ library(jsonlite)
 # https://www.ons.gov.uk/methodology/geography/ukgeographies/censusgeographies/2011censusgeographies
 
 
-#  GOOD SOURCE for UK level which means the scotish census data does not correspond tou the flows:
+# workplace zones
+# https://www.ons.gov.uk/methodology/geography/geographicalproducts/areaclassifications/2011workplacebasedareaclassification/classificationofworkplacezonesfortheukmethodologyandvariables
+
+
+#  GOOD SOURCE for UK level which means the scotish census data does not correspond to the flows:
 # https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-middle-layer-super-output-areas-and-intermediate-zones
 # areas <- st_read("data/infuse_msoa_lyr_2011/infuse_msoa_lyr_2011.shp")
 
@@ -133,6 +137,8 @@ ew_areas |>
            ,delete_dsn = TRUE)
 
 ## Workplace centroids
+
+
 
 pred_wc <- sf::st_intersects(ew_areas,workplace_msoa,sparse = TRUE)
 
